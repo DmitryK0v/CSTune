@@ -1,33 +1,28 @@
-﻿version: "3.9"
-
-services:
+﻿services:
   db:
     image: postgres:16
     environment:
-      - POSTGRES_DB=autoservice
-      - POSTGRES_USER=app
-      - POSTGRES_PASSWORD=pass
+      POSTGRES_DB: autoservice
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: pass
     volumes:
       - pgdata:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U app -d autoservice"]
-      interval: 6s
-      timeout: 6s
-      retries: 10
-      start_period: 5s
+      interval: 5s
+      timeout: 3s
+      retries: 20
 
   web:
     build:
-      context: .
+      context: ./CSTune
       dockerfile: Dockerfile
     depends_on:
       db:
         condition: service_healthy
     environment:
-      - ASPNETCORE_ENVIRONMENT=Development
-      - ConnectionStrings__DefaultConnection=Host=db;Port=5432;Database=autoservice;Username=app;Password=pass;SSLMode=Disable
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__DefaultConnection: Host=db;Port=5432;Database=autoservice;Username=app;Password=pass;SslMode=Disable
     ports:
       - "8080:80"
 
