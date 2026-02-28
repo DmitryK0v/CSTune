@@ -26,36 +26,39 @@ builder.Services.AddRazorPages();
 
 var app = builder.Build();
 
-// Retry loop for DB connection + migrations
 using (var scope = app.Services.CreateScope())
 {
     var services = scope.ServiceProvider;
+    var logger = services.GetRequiredService<ILoggerFactory>().CreateLogger("DbMigrations");
     var db = services.GetRequiredService<ApplicationDbContext>();
 
     const int maxRetries = 3;
-    int retryCount = 0;
-    bool dbReady = false;
+    Exception? lastException = null;
 
-    while (!dbReady && retryCount < maxRetries)
+    for (var attempt = 1; attempt <= maxRetries; attempt++)
     {
         try
         {
-            Console.WriteLine($"Attempting DB migrate (try {retryCount + 1}/{maxRetries})...");
-            db.Database.Migrate();
-            dbReady = true;
+            logger.LogInformation("Attempting DB migrate (try {Attempt}/{MaxRetries})...", attempt, maxRetries);
+            await db.Database.MigrateAsync();
+            logger.LogInformation("DB migrate succeeded.");
+            lastException = null;
+            break;
+        }
+        catch (Exception ex) when (attempt < maxRetries)
+        {
+            lastException = ex;
+            logger.LogWarning(ex, "DB not ready yet. Retrying in 5s...");
+            await Task.Delay(TimeSpan.FromSeconds(5));
         }
         catch (Exception ex)
         {
-            retryCount++;
-            Console.WriteLine($"DB not ready yet: {ex.Message}");
-            Thread.Sleep(5000); // 5s pause before retry
+            lastException = ex;
         }
     }
 
-    if (!dbReady)
-    {
-        throw new Exception("Could not connect to the database after multiple retries.");
-    }
+    if (lastException is not null)
+        throw new Exception("Could not connect to the database after multiple retries.", lastException);
 }
 
 // Configure middleware
