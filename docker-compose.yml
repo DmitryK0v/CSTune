@@ -1,10 +1,12 @@
 ﻿services:
   db:
     image: postgres:16
+    env_file:
+      - .env
     environment:
-      POSTGRES_DB: autoservice
-      POSTGRES_USER: app
-      POSTGRES_PASSWORD: pass
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -20,9 +22,11 @@
     depends_on:
       db:
         condition: service_healthy
+    env_file:
+      - .env
     environment:
       ASPNETCORE_ENVIRONMENT: Development
-      ConnectionStrings__DefaultConnection: Host=db;Port=5432;Database=autoservice;Username=app;Password=pass;SslMode=Disable
+      ConnectionStrings__DefaultConnection: ${CONNECTIONSTRINGS__DEFAULTCONNECTION}
     ports:
       - "8080:80"
 
